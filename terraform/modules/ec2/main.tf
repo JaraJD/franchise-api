@@ -48,6 +48,11 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
+resource "aws_key_pair" "main" {
+  key_name   = "${var.project_name}-${var.environment}-key"
+  public_key = var.ssh_public_key
+}
+
 # EC2 instance — t2.micro is free tier eligible (750 hrs/month for 12 months)
 resource "aws_instance" "main" {
   ami                         = data.aws_ami.amazon_linux.id
@@ -56,6 +61,7 @@ resource "aws_instance" "main" {
   vpc_security_group_ids      = [var.security_group_id]
   iam_instance_profile        = aws_iam_instance_profile.ec2.name
   associate_public_ip_address = true
+  key_name                    = aws_key_pair.main.key_name
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh.tpl", {
     db_username        = var.db_username

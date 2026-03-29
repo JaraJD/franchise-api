@@ -28,4 +28,5 @@ module "ec2" {
   db_username        = var.db_username
   db_password        = var.db_password
   instance_type      = var.instance_type
+  ssh_public_key     = var.ssh_public_key
 }
