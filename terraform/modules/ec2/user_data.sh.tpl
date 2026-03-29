@@ -11,6 +11,10 @@ systemctl start docker
 systemctl enable docker
 usermod -aG docker ec2-user
 
+# Ensure SSM agent is running
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
+
 # Docker Compose plugin (system-wide)
 mkdir -p /usr/local/lib/docker/cli-plugins
 curl -sSL \

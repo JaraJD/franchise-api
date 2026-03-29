@@ -33,3 +33,8 @@ variable "instance_type" {
   type        = string
   default     = "t2.micro"
 }
+
+variable "ssh_public_key" {
+  description = "SSH public key content for EC2 access"
+  type        = string
+}
