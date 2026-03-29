@@ -73,4 +73,51 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          script: /opt/franchise-api/deploy.sh
+          envs: ECR_REPOSITORY_URL,AWS_REGION
+          script: |
+            set -e
+            ECR_HOST=$(echo "$ECR_REPOSITORY_URL" | cut -d'/' -f1)
+
+            # Login to ECR
+            aws ecr get-login-password --region "$AWS_REGION" | \
+              docker login --username AWS --password-stdin "$ECR_HOST"
+
+            # Ensure app directory exists
+            mkdir -p /opt/franchise-api
+
+            # Write docker-compose.yml if not present
+            if [ ! -f /opt/franchise-api/docker-compose.yml ]; then
+              cat > /opt/franchise-api/docker-compose.yml << EOF
+            version: '3.9'
+            services:
+              mongodb:
+                image: mongo:7.0
+                container_name: franchise-mongo
+                restart: unless-stopped
+                environment:
+                  MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USERNAME }}
+                  MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                  MONGO_INITDB_DATABASE: franchisedb
+                volumes:
+                  - mongo-data:/data/db
+              franchise-api:
+                image: ${ECR_REPOSITORY_URL}:latest
+                container_name: franchise-api
+                restart: unless-stopped
+                ports:
+                  - "8080:8080"
+                environment:
+                  MONGODB_URI: "mongodb://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@mongodb:27017/franchisedb?authSource=admin"
+                  PORT: "8080"
+                depends_on:
+                  - mongodb
+            volumes:
+              mongo-data:
+                driver: local
+            EOF
+            fi
+
+            # Pull latest image and restart
+            docker pull "$ECR_REPOSITORY_URL:latest"
+            docker compose -f /opt/franchise-api/docker-compose.yml up -d
+            echo "Deploy completed at $(date)"
