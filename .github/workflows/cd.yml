@@ -94,37 +94,35 @@ jobs:
             # Ensure app directory exists
             sudo mkdir -p /opt/franchise-api
 
-            # Write docker-compose.yml if not present
-            if [ ! -f /opt/franchise-api/docker-compose.yml ]; then
-              sudo tee /opt/franchise-api/docker-compose.yml > /dev/null << EOF
-            version: '3.9'
-            services:
-              mongodb:
-                image: mongo:7.0
-                container_name: franchise-mongo
-                restart: unless-stopped
-                environment:
-                  MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USERNAME }}
-                  MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                  MONGO_INITDB_DATABASE: franchisedb
-                volumes:
-                  - mongo-data:/data/db
-              franchise-api:
-                image: ${ECR_REPOSITORY_URL}:latest
-                container_name: franchise-api
-                restart: unless-stopped
-                ports:
-                  - "8080:8080"
-                environment:
-                  MONGODB_URI: "mongodb://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@mongodb:27017/franchisedb?authSource=admin"
-                  PORT: "8080"
-                depends_on:
-                  - mongodb
-            volumes:
-              mongo-data:
-                driver: local
-            EOF
-            fi
+            # Always overwrite docker-compose.yml to keep credentials and image up to date
+            sudo tee /opt/franchise-api/docker-compose.yml > /dev/null << EOF
+version: '3.9'
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: franchise-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USERNAME }}
+      MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      MONGO_INITDB_DATABASE: franchisedb
+    volumes:
+      - mongo-data:/data/db
+  franchise-api:
+    image: ${ECR_REPOSITORY_URL}:latest
+    container_name: franchise-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      MONGODB_URI: "mongodb://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@mongodb:27017/franchisedb?authSource=admin"
+      PORT: "8080"
+    depends_on:
+      - mongodb
+volumes:
+  mongo-data:
+    driver: local
+EOF
 
             # Pull latest image and restart
             sudo docker pull "$ECR_REPOSITORY_URL:latest"
