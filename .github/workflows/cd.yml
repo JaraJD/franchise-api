@@ -78,9 +78,9 @@ jobs:
             set -e
             ECR_HOST=$(echo "$ECR_REPOSITORY_URL" | cut -d'/' -f1)
 
-            # Login to ECR
+            # Login to ECR (as root so sudo docker can use the credentials)
             aws ecr get-login-password --region "$AWS_REGION" | \
-              docker login --username AWS --password-stdin "$ECR_HOST"
+              sudo docker login --username AWS --password-stdin "$ECR_HOST"
 
             # Ensure app directory exists
             sudo mkdir -p /opt/franchise-api
