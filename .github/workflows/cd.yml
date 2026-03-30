@@ -67,6 +67,49 @@ jobs:
           docker push $ECR_REPOSITORY_URL:$IMAGE_TAG
           docker push $ECR_REPOSITORY_URL:latest
 
+      - name: Generate docker-compose.yml
+        run: |
+          cat > docker-compose.prod.yml << 'TEMPLATE'
+          version: '3.9'
+          services:
+            mongodb:
+              image: mongo:7.0
+              container_name: franchise-mongo
+              restart: unless-stopped
+              environment:
+                MONGO_INITDB_ROOT_USERNAME: DB_USERNAME_PLACEHOLDER
+                MONGO_INITDB_ROOT_PASSWORD: DB_PASSWORD_PLACEHOLDER
+                MONGO_INITDB_DATABASE: franchisedb
+              volumes:
+                - mongo-data:/data/db
+            franchise-api:
+              image: ECR_URL_PLACEHOLDER:latest
+              container_name: franchise-api
+              restart: unless-stopped
+              ports:
+                - "8080:8080"
+              environment:
+                MONGODB_URI: "mongodb://DB_USERNAME_PLACEHOLDER:DB_PASSWORD_PLACEHOLDER@mongodb:27017/franchisedb?authSource=admin"
+                PORT: "8080"
+              depends_on:
+                - mongodb
+          volumes:
+            mongo-data:
+              driver: local
+          TEMPLATE
+          sed -i "s|DB_USERNAME_PLACEHOLDER|${{ secrets.DB_USERNAME }}|g" docker-compose.prod.yml
+          sed -i "s|DB_PASSWORD_PLACEHOLDER|${{ secrets.DB_PASSWORD }}|g" docker-compose.prod.yml
+          sed -i "s|ECR_URL_PLACEHOLDER|${{ env.ECR_REPOSITORY_URL }}|g" docker-compose.prod.yml
+
+      - name: Copy docker-compose.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: docker-compose.prod.yml
+          target: /home/ec2-user/
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -78,7 +121,7 @@ jobs:
             set -e
             ECR_HOST=$(echo "$ECR_REPOSITORY_URL" | cut -d'/' -f1)
 
-            # Login to ECR (as root so sudo docker can use the credentials)
+            # Login to ECR as root
             aws ecr get-login-password --region "$AWS_REGION" | \
               sudo docker login --username AWS --password-stdin "$ECR_HOST"
 
@@ -91,38 +134,9 @@ jobs:
               sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
             fi
 
-            # Ensure app directory exists
+            # Move docker-compose to final location
             sudo mkdir -p /opt/franchise-api
-
-            # Always overwrite docker-compose.yml to keep credentials and image up to date
-            sudo tee /opt/franchise-api/docker-compose.yml > /dev/null << EOF
-version: '3.9'
-services:
-  mongodb:
-    image: mongo:7.0
-    container_name: franchise-mongo
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USERNAME }}
-      MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      MONGO_INITDB_DATABASE: franchisedb
-    volumes:
-      - mongo-data:/data/db
-  franchise-api:
-    image: ${ECR_REPOSITORY_URL}:latest
-    container_name: franchise-api
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      MONGODB_URI: "mongodb://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@mongodb:27017/franchisedb?authSource=admin"
-      PORT: "8080"
-    depends_on:
-      - mongodb
-volumes:
-  mongo-data:
-    driver: local
-EOF
+            sudo mv /home/ec2-user/docker-compose.prod.yml /opt/franchise-api/docker-compose.yml
 
             # Pull latest image and restart
             sudo docker pull "$ECR_REPOSITORY_URL:latest"
