@@ -171,59 +171,60 @@ terraform/
     └── ec2/                 # t2.micro + IAM (ECR + SSM) + Docker + auto-deploy loop
 ```
 
-### How auto-deploy works
+### CI/CD Pipeline (GitHub Actions)
 
-1. `terraform apply` provisions the EC2 and starts **MongoDB** immediately in Docker
-2. A background loop on the EC2 polls ECR every 30 seconds
-3. Once you push the Docker image, the loop detects it and starts the **API** automatically
-4. No manual SSH needed — fully automated after the image push
+The deployment is fully automated via two GitHub Actions workflows:
+
+| Workflow | Trigger | Steps |
+|---|---|---|
+| **CI** (`.github/workflows/ci.yml`) | Pull Request to `main` or `develop` | Build → Test |
+| **CD** (`.github/workflows/cd.yml`) | Push to `main` | Build → Test → Push image to ECR → SSH deploy to EC2 |
+
+### GitHub Secrets required
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM user access key |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
+| `AWS_REGION` | e.g. `us-east-1` |
+| `ECR_REPOSITORY_URL` | From `terraform output ecr_repository_url` |
+| `EC2_HOST` | From `terraform output ec2_public_ip` |
+| `EC2_SSH_PRIVATE_KEY` | Private key content (generated with `ssh-keygen`) |
+| `DB_USERNAME` | MongoDB username (matches `terraform.tfvars`) |
+| `DB_PASSWORD` | MongoDB password (matches `terraform.tfvars`) |
 
 ### Deployment steps
 
 ```bash
 # 1. Configure variables
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-# Edit terraform.tfvars with your db_username, db_password, etc.
+# Edit terraform.tfvars with your values
 
-# 2. Initialize and apply Terraform (~2 min)
+# 2. Provision infrastructure (~2 min)
 cd terraform
 terraform init
-terraform plan -var-file="terraform.tfvars"
-terraform apply -var-file="terraform.tfvars"
+terraform apply
 
-# 3. Build and push the Docker image to ECR
-ECR_URL=$(terraform output -raw ecr_repository_url)
-REGION=$(aws configure get region)
-aws ecr get-login-password --region $REGION | \
-  docker login --username AWS --password-stdin $ECR_URL
-docker build -t franchise-api .
-docker tag franchise-api:latest $ECR_URL:latest
-docker push $ECR_URL:latest
+# 3. Copy outputs to GitHub Secrets
+terraform output ec2_public_ip      # → EC2_HOST secret
+terraform output ecr_repository_url # → ECR_REPOSITORY_URL secret
 
-# 4. Wait ~1 minute for auto-deploy, then check the API
-terraform output api_base_url
-# Swagger UI: terraform output swagger_ui_url
+# 4. Push to main — CI/CD runs automatically
+git push origin main
 ```
 
 ### Redeploy after code changes
 
-```bash
-docker build -t franchise-api .
-docker tag franchise-api:latest $ECR_URL:latest
-docker push $ECR_URL:latest
-
-# Restart container on EC2 via SSM (no SSH needed)
-aws ssm send-command \
-  --instance-ids $(terraform output -raw ec2_instance_id) \
-  --document-name "AWS-RunShellScript" \
-  --parameters 'commands=["/opt/franchise-api/deploy.sh"]'
-```
+Simply push to `main` — the CD pipeline handles everything automatically:
+1. Builds and tests the application
+2. Builds the Docker image and pushes to ECR
+3. SSHs into the EC2 and restarts the containers with the new image
 
 ### Destroy infrastructure
 
 ```bash
 cd terraform
-terraform destroy -var-file="terraform.tfvars"
+terraform destroy
 ```
 
 ### AWS Infrastructure
@@ -270,4 +271,4 @@ All errors return a consistent envelope:
 - **SOLID** — Single Responsibility (use case per domain), Open/Closed (new adapters without changing domain), Dependency Inversion (domain defines the port; infra implements it).
 - **Functional programming** — Immutable records, pure functions, no side effects in domain model.
 - **Terraform** — Modules for reusability; `variables.tf` for parameterization; `outputs.tf` for cross-module references; `backend "s3"` for remote state.
-- **AWS** — ECR (image registry), EC2 (virtual machine — t2.micro free tier), IAM roles (least-privilege access), SSM Session Manager (shell access without key pairs), VPC + Security Groups (network isolation).
+- **AWS** — ECR (image registry), EC2 (virtual machine — t2.micro free tier), IAM roles (least-privilege access), VPC + Security Groups (network isolation), SSH key pairs for secure access.

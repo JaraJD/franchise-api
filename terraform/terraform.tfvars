@@ -1,0 +1,7 @@
+aws_region    = "us-east-1"
+project_name  = "franchise-api"
+environment   = "dev"
+db_username   = "admin"
+db_password   = "lwQV33pZikZApdM"
+instance_type = "t2.micro"
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDMiU96QBwOLsokP2se1tfcwVivx6nwvMFX2W6avAAza1idg8/YONT9u4G+8wMQkFkLfwHuYdrFCUE0gPvHBZmHUQJ/Xwo/zueprR46P3xKm6k+j/ZW+k21j0oaNcmN5V1zHF5oLZlM5yMTQHp9Xapq4Gr5aZxsKLpElJtGD+fBm6HSDnquUqYSK3Yrl6FtvSxT6IjFqpRgj6aIvQQR995IcUKaQHro0ds3s1TcHiOqciZ5w5vetT8cXvHX+9ywpFQrJuqX+bnGJGWv02lb0X5WNUFb/UbeQw6NRCnaWFymgMQUNg/XWkaNeJcqXxYVrDn2nWeGg//EY4sOxA+L7E4JfiWv/VmsklCGpNPTJWGDES3bqPuQeszfWEacltzyPzDUlOIgDFlVBVlbE6iyiGDEX03Z3Wnvr4fn70e1ev1GMcr/R8NGV0U4NQficmAwpqVLDw63TfLRwAsFPZKIokPjsy9vSNzgMgJD4ccdrPBtV6gUc/BKDUJYkuYyQOyplSuRqB+brJ64K8MFD3YoLnq1D/erYO9bokG6woWqtQS9nd36ZwJ5Rf13rN5xmOQk3fKFyiw2lvFrgBhNRO9ONKFlPLObPEjKlHtS0nQ37oS8kAWA7G26mAP3Q0ga6xEdumHzFXsPJhNbmfdQw740x7Ra8XiMdbu23phToCu9OiZy4Q== juans@Jaramillo"
