@@ -13,7 +13,7 @@ spring:
     include: null
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/franchisedb}
+      uri: ${MONGODB_URI:mongodb://admin:admin123@localhost:27017/franchisedb?authSource=admin}
       auto-index-creation: true
 management:
   endpoints:
