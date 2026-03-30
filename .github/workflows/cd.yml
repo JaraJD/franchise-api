@@ -82,6 +82,15 @@ jobs:
             aws ecr get-login-password --region "$AWS_REGION" | \
               sudo docker login --username AWS --password-stdin "$ECR_HOST"
 
+            # Install Docker Compose plugin if not present
+            if ! sudo docker compose version &>/dev/null; then
+              sudo mkdir -p /usr/local/lib/docker/cli-plugins
+              sudo curl -sSL \
+                "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64" \
+                -o /usr/local/lib/docker/cli-plugins/docker-compose
+              sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+            fi
+
             # Ensure app directory exists
             sudo mkdir -p /opt/franchise-api
 
