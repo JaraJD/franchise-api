@@ -83,11 +83,11 @@ jobs:
               docker login --username AWS --password-stdin "$ECR_HOST"
 
             # Ensure app directory exists
-            mkdir -p /opt/franchise-api
+            sudo mkdir -p /opt/franchise-api
 
             # Write docker-compose.yml if not present
             if [ ! -f /opt/franchise-api/docker-compose.yml ]; then
-              cat > /opt/franchise-api/docker-compose.yml << EOF
+              sudo tee /opt/franchise-api/docker-compose.yml > /dev/null << EOF
             version: '3.9'
             services:
               mongodb:
@@ -118,6 +118,6 @@ jobs:
             fi
 
             # Pull latest image and restart
-            docker pull "$ECR_REPOSITORY_URL:latest"
-            docker compose -f /opt/franchise-api/docker-compose.yml up -d
+            sudo docker pull "$ECR_REPOSITORY_URL:latest"
+            sudo docker compose -f /opt/franchise-api/docker-compose.yml up -d
             echo "Deploy completed at $(date)"
