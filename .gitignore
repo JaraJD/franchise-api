@@ -334,3 +334,10 @@ gradle-app.setting
 # -----
 *.hprof
 build-cache
+
+### Terraform ###
+terraform/*.tfvars
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
