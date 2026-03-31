@@ -1,0 +1,6 @@
+aws_region    = "us-east-1"
+project_name  = "franchise-api"
+environment   = "dev"
+db_username   = "admin"
+db_password   = "YourSecurePass123"
+instance_type = "t2.micro"
